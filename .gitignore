@@ -6,3 +6,5 @@ __pycache__/
 package/
 lambda.zip
 logs/
+# instructor-only demo tooling — not part of the show
+scripts/demo-*.sh
