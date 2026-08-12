@@ -1,0 +1,73 @@
+# Pump Sentinel pipeline: cheap checks first, expensive checks later.
+# lint (seconds) -> tests -> security scan -> deploy (only from main).
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, test, security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Unit tests (pytest)
+        run: pytest -v
+
+      - name: Security scan (bandit)
+        run: bandit -r app -ll
+
+  deploy:
+    name: Deploy to AWS Lambda
+    needs: checks
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build deployment package
+        run: |
+          pip install --platform manylinux2014_x86_64 --only-binary=:all: \
+            --target package -r requirements.txt
+          cp -r app package/
+          cd package && zip -qr ../lambda.zip .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Ship it
+        run: |
+          aws lambda update-function-code \
+            --function-name pump-sentinel \
+            --zip-file fileb://lambda.zip
+          aws lambda wait function-updated --function-name pump-sentinel
+
+      - name: Smoke test the live URL
+        run: |
+          sleep 3
+          curl --fail --silent ${{ vars.FUNCTION_URL }}health | tee /dev/stderr | grep -q '"status":"up"'

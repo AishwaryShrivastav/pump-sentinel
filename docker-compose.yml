@@ -1,0 +1,16 @@
+# Two services, one command: the app and a sensor simulator feeding it.
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+
+  simulator:
+    build: .
+    command: python -u scripts/simulator.py
+    environment:
+      TARGET_URL: http://app:8000
+    volumes:
+      - ./scripts:/srv/scripts:ro
+    depends_on:
+      - app
