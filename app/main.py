@@ -21,7 +21,7 @@ app = FastAPI(title="Pump Sentinel", version=__version__)
 # and a good talking point about stateless deploys.
 _history: list[dict] = []
 
-ACCENT = "#3fb950"  # green — shipped by the fixed pipeline
+ACCENT = "#4da3ff"  # bump to a new colour with each release so deploys are visible
 
 
 class Reading(BaseModel):
