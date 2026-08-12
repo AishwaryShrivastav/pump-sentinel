@@ -5,7 +5,7 @@ severity zones and typical process-pump operating envelopes.
 """
 
 TEMP_WARN_C = 80.0
-TEMP_CRITICAL_C = 95.0
+TEMP_CRITICAL_C = 950.0
 
 VIBRATION_WARN_MM_S = 4.5
 VIBRATION_CRITICAL_MM_S = 7.1
